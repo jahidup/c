@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+  <title>Admin Panel – Test Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    body { background: #f4f7fc; }
+    .admin-glass { background: rgba(255,255,255,0.9); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 20px 40px -12px rgba(0,0,0,0.08); }
+    .tab-active { border-bottom: 3px solid #3b82f6; color: #1e40af; font-weight: 600; background: #eff6ff; }
+    .btn-primary { background: linear-gradient(145deg, #3b82f6, #2563eb); color: white; padding: 0.5rem 1.5rem; border-radius: 9999px; font-weight: 500; transition: all 0.2s; box-shadow: 0 8px 16px -6px #3b82f6; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 20px -8px #3b82f6; }
+    .btn-secondary { background: white; border: 1px solid #e2e8f0; color: #1e293b; padding: 0.5rem 1.5rem; border-radius: 9999px; font-weight: 500; transition: all 0.2s; }
+    .btn-secondary:hover { background: #f8fafc; border-color: #94a3b8; }
+    .loader { display: flex; justify-content: center; align-items: center; gap: 8px; }
+    .loader span { width: 12px; height: 12px; background-color: #3b82f6; border-radius: 50%; display: inline-block; animation: pulse 1.2s infinite ease-in-out; }
+    .loader span:nth-child(2) { animation-delay: 0.2s; }
+    .loader span:nth-child(3) { animation-delay: 0.4s; }
+    #globalLoader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+  </style>
+</head>
+<body class="p-6">
+  <!-- Global Loader -->
+  <div id="globalLoader" class="hidden">
+    <div class="loader"><span></span><span></span><span></span></div>
+  </div>
+
+  <!-- Admin Login Overlay -->
+  <div id="loginOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="admin-glass max-w-md w-full p-8 rounded-3xl">
+      <h2 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent mb-6">🔐 Admin Login</h2>
+      <input type="password" id="adminPassword" placeholder="Enter admin password" class="w-full px-4 py-3 border border-gray-200 rounded-xl mb-4 focus:ring-2 focus:ring-blue-500">
+      <button onclick="adminLogin()" class="w-full btn-primary py-3">Login</button>
+      <p class="text-xs text-gray-500 mt-4 text-center">Default password: <span class="font-mono bg-gray-100 px-2 py-1 rounded">admin123</span></p>
+    </div>
+  </div>
+
+  <!-- Main Admin Content -->
+  <div id="adminContent" class="hidden max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">⚙️ Test Portal Admin</h1>
+      <button onclick="logoutAdmin()" class="btn-secondary flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex flex-wrap gap-2 border-b border-gray-200 pb-1">
+      <button data-tab="dashboard" class="tab-btn px-5 py-2.5 rounded-t-xl text-gray-600 hover:bg-gray-100 transition flex items-center gap-2"><i class="fas fa-chart-pie"></i> Dashboard</button>
+      <button data-tab="students" class="tab-btn px-5 py-2.5 rounded-t-xl text-gray-600 hover:bg-gray-100 transition flex items-center gap-2"><i class="fas fa-users"></i> Students</button>
+      <button data-tab="tests" class="tab-btn px-5 py-2.5 rounded-t-xl text-gray-600 hover:bg-gray-100 transition flex items-center gap-2"><i class="fas fa-file-alt"></i> Tests</button>
+      <button data-tab="questions" class="tab-btn px-5 py-2.5 rounded-t-xl text-gray-600 hover:bg-gray-100 transition flex items-center gap-2"><i class="fas fa-question-circle"></i> Questions</button>
+      <button data-tab="results" class="tab-btn px-5 py-2.5 rounded-t-xl text-gray-600 hover:bg-gray-100 transition flex items-center gap-2"><i class="fas fa-trophy"></i> Results</button>
+      <button data-tab="settings" class="tab-btn px-5 py-2.5 rounded-t-xl text-gray-600 hover:bg-gray-100 transition flex items-center gap-2"><i class="fas fa-cog"></i> Settings</button>
+    </div>
+
+    <!-- ========== TAB PANES ========== -->
+    <!-- Dashboard -->
+    <div id="dashboardPane" class="tab-pane hidden">
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="admin-glass rounded-2xl p-6">
+          <div class="flex items-center gap-4"><div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 text-xl"><i class="fas fa-users"></i></div><div><p class="text-gray-500 text-sm">Total Students</p><h3 id="statsStudents" class="text-3xl font-bold">0</h3></div></div>
+        </div>
+        <div class="admin-glass rounded-2xl p-6">
+          <div class="flex items-center gap-4"><div class="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 text-xl"><i class="fas fa-file-alt"></i></div><div><p class="text-gray-500 text-sm">Total Tests</p><h3 id="statsTests" class="text-3xl font-bold">0</h3></div></div>
+        </div>
+        <div class="admin-glass rounded-2xl p-6">
+          <div class="flex items-center gap-4"><div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 text-xl"><i class="fas fa-question"></i></div><div><p class="text-gray-500 text-sm">Total Questions</p><h3 id="statsQuestions" class="text-3xl font-bold">0</h3></div></div>
+        </div>
+      </div>
+      <div class="admin-glass rounded-2xl p-6 mt-6">
+        <h3 class="font-semibold text-lg mb-4">🏆 Recent Toppers</h3>
+        <div id="dashboardToppers" class="space-y-2">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Students -->
+    <div id="studentsPane" class="tab-pane hidden">
+      <div class="admin-glass rounded-2xl p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="font-semibold text-lg">👥 Student Management</h3>
+          <button onclick="openAddStudentModal()" class="btn-primary text-sm flex items-center gap-2"><i class="fas fa-plus"></i> Add Student</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100"><tr><th class="p-3 text-left">ID</th><th class="p-3 text-left">Name</th><th class="p-3 text-left">DOB</th><th class="p-3 text-left">Registered</th></tr></thead>
+            <tbody id="studentsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tests (with marking scheme) -->
+    <div id="testsPane" class="tab-pane hidden">
+      <div class="admin-glass rounded-2xl p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="font-semibold text-lg">📝 Test Management</h3>
+          <button onclick="openAddTestModal()" class="btn-primary text-sm flex items-center gap-2"><i class="fas fa-plus"></i> Create Test</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100"><tr><th class="p-3 text-left">ID</th><th class="p-3 text-left">Name</th><th class="p-3 text-left">Duration</th><th class="p-3 text-left">Marks (+/-/0)</th><th class="p-3 text-left">Shuffle</th></tr></thead>
+            <tbody id="testsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Questions (bilingual + image) -->
+    <div id="questionsPane" class="tab-pane hidden">
+      <div class="admin-glass rounded-2xl p-6">
+        <div class="flex flex-col md:flex-row gap-4 mb-6">
+          <select id="questionTestSelector" class="px-4 py-2 border border-gray-200 rounded-xl bg-white"></select>
+          <button onclick="loadQuestionsForTest()" class="btn-secondary text-sm">Load Questions</button>
+          <button onclick="openAddQuestionModal()" class="btn-primary text-sm flex items-center gap-2 ml-auto"><i class="fas fa-plus"></i> Add Question</button>
+        </div>
+        <div id="questionsList" class="space-y-4"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsPane" class="tab-pane hidden">
+      <div class="admin-glass rounded-2xl p-6">
+        <div class="flex gap-4 mb-6">
+          <select id="resultTestSelector" class="px-4 py-2 border border-gray-200 rounded-xl bg-white"></select>
+          <button onclick="loadResults()" class="btn-secondary text-sm">Load Results</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100"><tr><th class="p-3 text-left">Student</th><th class="p-3 text-left">Test</th><th class="p-3 text-left">Score</th><th class="p-3 text-left">Rank</th><th class="p-3 text-left">Submitted</th></tr></thead>
+            <tbody id="resultsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="settingsPane" class="tab-pane hidden">
+      <div class="admin-glass rounded-2xl p-6 max-w-md">
+        <h3 class="font-semibold text-lg mb-4">🔑 Change Admin Password</h3>
+        <input type="password" id="newAdminPassword" placeholder="New password" class="w-full px-4 py-3 border border-gray-200 rounded-xl mb-4">
+        <button onclick="updateAdminPassword()" class="btn-primary w-full">Update Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <!-- Add Student Modal -->
+  <div id="addStudentModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden items-center justify-center z-50">
+    <div class="admin-glass max-w-md w-full p-8 rounded-3xl">
+      <h3 class="text-xl font-bold mb-4">➕ Add Student</h3>
+      <input id="studentIdInput" placeholder="Student ID" class="w-full px-4 py-3 border rounded-xl mb-3">
+      <input id="studentNameInput" placeholder="Full Name" class="w-full px-4 py-3 border rounded-xl mb-3">
+      <input id="studentDobInput" placeholder="DOB (DDMMYY)" maxlength="6" class="w-full px-4 py-3 border rounded-xl mb-4">
+      <div class="flex gap-3">
+        <button onclick="addStudent()" class="btn-primary flex-1">Save</button>
+        <button onclick="closeModal('addStudentModal')" class="btn-secondary flex-1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Test Modal (with marking scheme) -->
+  <div id="addTestModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden items-center justify-center z-50">
+    <div class="admin-glass max-w-md w-full p-8 rounded-3xl">
+      <h3 class="text-xl font-bold mb-4">📝 Create Test</h3>
+      <input id="testIdInput" placeholder="Test ID (e.g. T001)" class="w-full px-4 py-3 border rounded-xl mb-3">
+      <input id="testNameInput" placeholder="Test Name" class="w-full px-4 py-3 border rounded-xl mb-3">
+      <input id="testDurationInput" placeholder="Duration (minutes)" type="number" class="w-full px-4 py-3 border rounded-xl mb-3">
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        <input id="correctMarksInput" placeholder="+ marks" type="number" step="0.01" class="px-3 py-2 border rounded-xl">
+        <input id="wrongMarksInput" placeholder="- marks" type="number" step="0.01" class="px-3 py-2 border rounded-xl">
+        <input id="skipMarksInput" placeholder="skip marks" type="number" step="0.01" class="px-3 py-2 border rounded-xl">
+      </div>
+      <div class="flex items-center gap-2 mb-4">
+        <input type="checkbox" id="testShuffleInput" class="w-4 h-4">
+        <label for="testShuffleInput">Shuffle questions</label>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="addTest()" class="btn-primary flex-1">Create</button>
+        <button onclick="closeModal('addTestModal')" class="btn-secondary flex-1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Question Modal (bilingual + image) -->
+  <div id="addQuestionModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden items-center justify-center z-50 overflow-y-auto p-4">
+    <div class="admin-glass max-w-2xl w-full p-8 rounded-3xl max-h-[90vh] overflow-y-auto">
+      <h3 class="text-xl font-bold mb-4">❓ Add Question</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div><label class="text-sm">Question ID</label><input id="qIdInput" placeholder="Q001" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div><label class="text-sm">Test ID</label><input id="qTestIdInput" placeholder="T001" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div class="col-span-2"><label class="text-sm">Question (English)</label><textarea id="qTextEngInput" rows="2" class="w-full px-4 py-2 border rounded-xl mt-1"></textarea></div>
+        <div class="col-span-2"><label class="text-sm">Question (Hindi)</label><textarea id="qTextHinInput" rows="2" class="w-full px-4 py-2 border rounded-xl mt-1"></textarea></div>
+        <div><label class="text-sm">Option 1 EN</label><input id="opt1EngInput" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div><label class="text-sm">Option 1 HI</label><input id="opt1HinInput" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div><label class="text-sm">Option 2 EN</label><input id="opt2EngInput" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div><label class="text-sm">Option 2 HI</label><input id="opt2HinInput" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div><label class="text-sm">Option 3 EN</label><input id="opt3EngInput" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div><label class="text-sm">Option 3 HI</label><input id="opt3HinInput" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div><label class="text-sm">Option 4 EN</label><input id="opt4EngInput" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div><label class="text-sm">Option 4 HI</label><input id="opt4HinInput" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div><label class="text-sm">Correct Option (1-4)</label><input id="correctInput" placeholder="1" class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+        <div class="col-span-2"><label class="text-sm">Image URL (optional)</label><input id="imageUrlInput" placeholder="https://..." class="w-full px-4 py-2 border rounded-xl mt-1"></div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="addQuestion()" class="btn-primary flex-1">Add Question</button>
+        <button onclick="closeModal('addQuestionModal')" class="btn-secondary flex-1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4REt1W-ub1jd1uMz-uD-Rth3rTXo5ALuZFSVz1qXph9zu1XevbMgTCphCTTOhShDcqA/exec'; // ← PASTE YOUR WEB APP URL
+    let adminToken = localStorage.getItem('adminToken');
+    let currentTestForQuestions = null;
+
+    // ---------- Loader ----------
+    function showLoader() { document.getElementById('globalLoader').classList.remove('hidden'); }
+    function hideLoader() { document.getElementById('globalLoader').classList.add('hidden'); }
+    async function fetchAPI(body) {
+      showLoader();
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(body) });
+        return await res.json();
+      } finally { hideLoader(); }
+    }
+
+    // ---------- Admin Login ----------
+    async function adminLogin() {
+      const pwd = document.getElementById('adminPassword').value;
+      const data = await fetchAPI({ action: 'adminLogin', password: pwd });
+      if (data.status === 'success') {
+        adminToken = data.token;
+        localStorage.setItem('adminToken', adminToken);
+        document.getElementById('loginOverlay').classList.add('hidden');
+        document.getElementById('adminContent').classList.remove('hidden');
+        loadDashboard();
+        loadAllTestsForSelectors();
+      } else {
+        alert('Invalid password');
+      }
+    }
+
+    if (adminToken) {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('adminContent').classList.remove('hidden');
+      window.onload = () => { loadDashboard(); loadAllTestsForSelectors(); };
+    }
+
+    function logoutAdmin() { localStorage.removeItem('adminToken'); location.reload(); }
+
+    // ---------- Tab Switching ----------
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+        this.classList.add('tab-active');
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+        document.getElementById(this.dataset.tab + 'Pane').classList.remove('hidden');
+        if (this.dataset.tab === 'students') loadStudents();
+        if (this.dataset.tab === 'tests') loadTests();
+        if (this.dataset.tab === 'questions') loadTestsForQuestionSelector();
+        if (this.dataset.tab === 'results') loadTestsForResultSelector();
+      });
+    });
+
+    // ---------- Dashboard ----------
+    async function loadDashboard() {
+      const studentsData = await fetchAPI({ action: 'getAllStudents', token: adminToken });
+      const testsData = await fetchAPI({ action: 'getAllTests', token: adminToken });
+      const questionsData = await fetchAPI({ action: 'getQuestions', token: adminToken, testId: '' }).catch(()=>({status:'error'}));
+      document.getElementById('statsStudents').innerText = studentsData.status==='success' ? studentsData.data.length : '0';
+      document.getElementById('statsTests').innerText = testsData.status==='success' ? testsData.data.length : '0';
+      document.getElementById('statsQuestions').innerText = questionsData.status==='success' ? questionsData.data.length : '0';
+      
+      if (testsData.data?.length) {
+        const toppersRes = await fetchAPI({ action: 'getToppers', token: adminToken, testId: testsData.data[0].testId });
+        let html = '';
+        if (toppersRes.status==='success') toppersRes.data.slice(0,5).forEach(t => html += `<div class="flex justify-between"><span>🏅 Rank ${t.rank}: ${t.name}</span><span class="font-bold">${t.score} marks</span></div>`);
+        document.getElementById('dashboardToppers').innerHTML = html || 'No results yet.';
+      }
+    }
+
+    // ---------- Students ----------
+    async function loadStudents() {
+      const data = await fetchAPI({ action: 'getAllStudents', token: adminToken });
+      if (data.status !== 'success') return;
+      let html = '';
+      data.data.forEach(s => html += `<tr class="border-b"><td class="p-3">${s.id}</td><td class="p-3">${s.name}</td><td class="p-3">${s.dob}</td><td class="p-3">${new Date(s.registered).toLocaleDateString()}</td></tr>`);
+      document.getElementById('studentsTableBody').innerHTML = html;
+    }
+    function openAddStudentModal() { document.getElementById('addStudentModal').style.display = 'flex'; }
+    async function addStudent() {
+      const id = document.getElementById('studentIdInput').value;
+      const name = document.getElementById('studentNameInput').value;
+      const dob = document.getElementById('studentDobInput').value;
+      if (!id || !name || !dob) return alert('All fields required');
+      const res = await fetchAPI({ action: 'addStudent', token: adminToken, id, name, dob });
+      if (res.status === 'success') { alert('Student added'); closeModal('addStudentModal'); loadStudents(); }
+      else alert(res.data);
+    }
+
+    // ---------- Tests ----------
+    async function loadTests() {
+      const data = await fetchAPI({ action: 'getAllTests', token: adminToken });
+      if (data.status !== 'success') return;
+      let html = '';
+      data.data.forEach(t => html += `<tr class="border-b"><td class="p-3">${t.testId}</td><td class="p-3">${t.testName}</td><td class="p-3">${t.duration} min</td><td class="p-3">+${t.correctMarks||1} / ${t.wrongMarks||0} / ${t.skipMarks||0}</td><td class="p-3">${t.shuffle==='TRUE'?'Yes':'No'}</td></tr>`);
+      document.getElementById('testsTableBody').innerHTML = html;
+    }
+    function openAddTestModal() { document.getElementById('addTestModal').style.display = 'flex'; }
+    async function addTest() {
+      const testId = document.getElementById('testIdInput').value;
+      const testName = document.getElementById('testNameInput').value;
+      const duration = document.getElementById('testDurationInput').value;
+      const correctMarks = document.getElementById('correctMarksInput').value || 1;
+      const wrongMarks = document.getElementById('wrongMarksInput').value || 0;
+      const skipMarks = document.getElementById('skipMarksInput').value || 0;
+      const shuffle = document.getElementById('testShuffleInput').checked ? 'TRUE' : 'FALSE';
+      if (!testId || !testName || !duration) return alert('Test ID, Name, Duration required');
+      const res = await fetchAPI({ action: 'addTest', token: adminToken, testId, testName, duration, shuffle, correctMarks, wrongMarks, skipMarks });
+      if (res.status === 'success') { alert('Test created'); closeModal('addTestModal'); loadTests(); loadAllTestsForSelectors(); }
+      else alert(res.data);
+    }
+
+    // ---------- Questions ----------
+    async function loadTestsForQuestionSelector() {
+      const data = await fetchAPI({ action: 'getAllTests', token: adminToken });
+      if (data.status !== 'success') return;
+      let opts = '<option value="">-- Select Test --</option>';
+      data.data.forEach(t => opts += `<option value="${t.testId}">${t.testName} (${t.testId})</option>`);
+      document.getElementById('questionTestSelector').innerHTML = opts;
+    }
+    async function loadQuestionsForTest() {
+      const testId = document.getElementById('questionTestSelector').value;
+      if (!testId) return alert('Select a test');
+      currentTestForQuestions = testId;
+      const res = await fetchAPI({ action: 'getQuestions', token: adminToken, testId });
+      if (res.status !== 'success') return;
+      let html = '';
+      res.data.forEach(q => html += `
+        <div class="bg-white/70 p-4 rounded-xl border">
+          <div class="flex justify-between"><span class="font-medium">${q.qId}</span><button onclick="deleteQuestion('${q.qId}','${testId}')" class="text-red-600"><i class="fas fa-trash"></i></button></div>
+          <p class="mt-2">EN: ${q.qTextEng}</p>
+          <p class="text-gray-600 text-sm">HI: ${q.qTextHin || '-'}</p>
+          <div class="grid grid-cols-2 gap-2 mt-2 text-sm"><span>1. ${q.opt1Eng}</span><span class="text-gray-600">हिंदी: ${q.opt1Hin || '-'}</span><span>2. ${q.opt2Eng}</span><span class="text-gray-600">हिंदी: ${q.opt2Hin || '-'}</span><span>3. ${q.opt3Eng}</span><span class="text-gray-600">हिंदी: ${q.opt3Hin || '-'}</span><span>4. ${q.opt4Eng}</span><span class="text-gray-600">हिंदी: ${q.opt4Hin || '-'}</span></div>
+          ${q.imageUrl ? `<img src="${q.imageUrl}" class="h-16 mt-2 rounded">` : ''}
+        </div>`);
+      document.getElementById('questionsList').innerHTML = html || 'No questions for this test.';
+    }
+    function openAddQuestionModal() {
+      if (!currentTestForQuestions) return alert('Select a test first');
+      document.getElementById('qTestIdInput').value = currentTestForQuestions;
+      document.getElementById('addQuestionModal').style.display = 'flex';
+    }
+    async function addQuestion() {
+      const qId = document.getElementById('qIdInput').value;
+      const testId = document.getElementById('qTestIdInput').value;
+      const qTextEng = document.getElementById('qTextEngInput').value;
+      const qTextHin = document.getElementById('qTextHinInput').value;
+      const opt1Eng = document.getElementById('opt1EngInput').value;
+      const opt1Hin = document.getElementById('opt1HinInput').value;
+      const opt2Eng = document.getElementById('opt2EngInput').value;
+      const opt2Hin = document.getElementById('opt2HinInput').value;
+      const opt3Eng = document.getElementById('opt3EngInput').value;
+      const opt3Hin = document.getElementById('opt3HinInput').value;
+      const opt4Eng = document.getElementById('opt4EngInput').value;
+      const opt4Hin = document.getElementById('opt4HinInput').value;
+      const correct = document.getElementById('correctInput').value;
+      const imageUrl = document.getElementById('imageUrlInput').value;
+      if (!qId || !testId || !qTextEng || !opt1Eng || !opt2Eng || !opt3Eng || !opt4Eng || !correct)
+        return alert('Fill all required fields (English options + correct)');
+      const res = await fetchAPI({ action: 'addQuestion', token: adminToken, qId, testId, qTextEng, qTextHin,
+        opt1Eng, opt1Hin, opt2Eng, opt2Hin, opt3Eng, opt3Hin, opt4Eng, opt4Hin, correct, imageUrl });
+      if (res.status === 'success') { alert('Question added'); closeModal('addQuestionModal'); loadQuestionsForTest(); }
+      else alert(res.data);
+    }
+    async function deleteQuestion(qId, testId) {
+      if (!confirm('Delete this question?')) return;
+      const res = await fetchAPI({ action: 'deleteQuestion', token: adminToken, qId, testId });
+      if (res.status === 'success') { alert('Deleted'); loadQuestionsForTest(); } else alert(res.data);
+    }
+
+    // ---------- Results ----------
+    async function loadTestsForResultSelector() {
+      const data = await fetchAPI({ action: 'getAllTests', token: adminToken });
+      if (data.status !== 'success') return;
+      let opts = '<option value="">-- All Tests --</option>';
+      data.data.forEach(t => opts += `<option value="${t.testId}">${t.testName} (${t.testId})</option>`);
+      document.getElementById('resultTestSelector').innerHTML = opts;
+    }
+    async function loadResults() {
+      const testId = document.getElementById('resultTestSelector').value;
+      const res = await fetchAPI({ action: 'getResults', token: adminToken, testId: testId || undefined });
+      if (res.status !== 'success') return;
+      let html = '';
+      res.data.forEach(r => html += `<tr class="border-b"><td class="p-3">${r.studentName}</td><td class="p-3">${r.testId}</td><td class="p-3">${r.score}</td><td class="p-3">#${r.rank}</td><td class="p-3">${new Date(r.submitted).toLocaleString()}</td></tr>`);
+      document.getElementById('resultsTableBody').innerHTML = html || '<tr><td colspan="5" class="p-3 text-center">No results</td></tr>';
+    }
+
+    // ---------- Settings ----------
+    async function updateAdminPassword() {
+      const newPwd = document.getElementById('newAdminPassword').value;
+      if (!newPwd) return alert('Enter new password');
+      const res = await fetchAPI({ action: 'updateAdminPassword', token: adminToken, newPassword: newPwd });
+      if (res.status === 'success') { alert('Password updated'); document.getElementById('newAdminPassword').value = ''; }
+      else alert(res.data);
+    }
+
+    // ---------- Utilities ----------
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    async function loadAllTestsForSelectors() { await loadTestsForQuestionSelector(); await loadTestsForResultSelector(); }
+    window.onclick = function(e) { if (e.target.classList.contains('fixed')) closeAllModals(); };
+    function closeAllModals() { document.querySelectorAll('.fixed').forEach(el => { if (el.id.includes('Modal')) el.style.display = 'none'; }); }
+  </script>
+</body>
+</html>
